@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        width: 95%;
+        height: 600px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 20px;
+        background-color: #f4f4f9;
+        margin: 0;
+      }
+
+      .container {
+        display: grid-column;
+        justify-content: center;
+        margin: 0 auto;
+        background-color: #ffffff;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+      }
+
+      .container h4 {
+        text-align: center;
+        font-size: 16px;
+        color: #007BFF;
+      }
+
+      label {
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+        margin-bottom: 5px;
+      }
+
+      .button-container {
+        display: flex;
+        justify-content: center; /* Centraliza horizontalmente */
+        align-items: center;     /* Centraliza verticalmente */
+        margin-top: 20px;
+      }
+
+      input[type="text"], input[type="email"], input[type="number"], select {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+        background-color: #f9f9f9;
+        font-size: 14px;
+        color: #333;
+        width: 100%; /* Ajuste para alinhamento */
+      }
+
+      input[type="button"] {
+        padding: 12px 40px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        font-size: 16px;
+        cursor: pointer;
+        margin: 20px auto;
+        transition: background-color 0.3s ease;
+        font-weight: 600;
+      }
+
+      input[type="button"]:hover {
+        background-color: #218838;
+      }
+
+      .info-section {
+        display: flex;
+        justify-content: space-between;
+        margin-right: 20px;
+        padding-right: 20px;
+      }
+
+      .selection-section {
+        display: flex;
+        justify-content: space-between;
+        border: 2px solid #007BFF;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+      }
+
+      .patrimonios-section h5, .perifericos-section h5 {
+        margin-bottom: 10px;
+        font-size: 16px;
+        color: #007BFF;
+      }
+
+      .patrimonios-section {
+        width: 15%;
+        margin-right: 20px;
+        padding-right: 20px;
+        border-right: 1px solid #ccc;
+      }
+
+      .perifericos-section {
+        width: 85%;
+      }
+
+      .perifericos-section input {
+        margin-top: 10px;
+      }
+
+      .columns {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .columns div {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+
+      }
+
+      .autocomplete-suggestions {
+        position: absolute;
+        border: 1px solid #ccc;
+        background-color: white;
+        max-height: 150px;
+        overflow-y: auto;
+        width: 200px;
+        z-index: 10;
+      }
+
+      .autocomplete-suggestion {
+        padding: 10px;
+        cursor: pointer;
+        
+      }
+
+      .autocomplete-suggestion:hover {
+        background-color: #f0f0f0;
+      }
+
+      #patrimonioRelacionado {
+        display: none;
+      }
+
+    </style>
+    <script>
+      let sfData = {
+        desktop: [],
+        notebook: [],
+        monitor: [],
+        switch: [],
+        telefone: [],
+        accessPoint: [],
+        miniPc: [],
+        cameraRally: [],
+        tap: [],
+        extTelefone: []
+      };
+
+      function initAutocomplete() {
+        google.script.run.withSuccessHandler(function(data) {
+          sfData = data;
+        }).getSFsFromAbas();
+      }
+
+      function toggleSFInput(id, isChecked) {
+        const sfInput = document.getElementById(id);
+        sfInput.style.display = isChecked ? 'block' : 'none';
+        verificarMostrarPatrimonioRelacionado();
+      }
+
+      function verificarMostrarPatrimonioRelacionado() {
+        const checkDesktop = document.getElementById("checkDesktop").checked;
+        const checkNotebook = document.getElementById("checkNotebook").checked;
+        const patrimonioRelacionado = document.getElementById("patrimonioRelacionado");
+
+        if (!checkDesktop && !checkNotebook) {
+          patrimonioRelacionado.style.display = 'block';
+        } else {
+          patrimonioRelacionado.style.display = 'none';
+        }
+      }
+
+      function autocompletarSF(campo, categoria) {
+        const input = document.getElementById(campo);
+        const val = input.value.toUpperCase();
+        fecharListaSugestoes(campo);
+
+        if (!val) return false;
+
+        const suggestionBox = document.createElement("div");
+        suggestionBox.setAttribute("id", campo + "-autocomplete-list");
+        suggestionBox.setAttribute("class", "autocomplete-suggestions");
+
+        // Verifica a posição do campo e ajusta as sugestões
+        const rect = input.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+
+        if (rect.bottom + 150 > windowHeight) { // Verifica se há espaço para exibir abaixo
+          suggestionBox.style.left = `${rect.left}px`;
+          suggestionBox.style.top = `${rect.top + window.scrollY - 160}px`; // Exibe acima do campo
+        } else {
+          suggestionBox.style.left = `${rect.left}px`;
+          suggestionBox.style.top = `${rect.bottom + window.scrollY}px`; // Exibe abaixo do campo
+        }
+
+        document.body.appendChild(suggestionBox);
+
+        sfData[categoria].forEach((item) => {
+          const sf = item.sf;
+          const modelo = item.modelo;
+          if (sf.toUpperCase().startsWith(val)) {
+            const suggestion = document.createElement("div");
+            suggestion.setAttribute("class", "autocomplete-suggestion");
+            suggestion.innerHTML = `<strong>${sf.substr(0, val.length)}</strong>${sf.substr(val.length)} (${modelo})`;
+            suggestion.addEventListener("click", function() {
+              input.value = sf;
+              fecharListaSugestoes(campo);
+            });
+            suggestionBox.appendChild(suggestion);
+          }
+        });
+      }
+
+
+      function fecharListaSugestoes(campo) {
+        const suggestionBox = document.getElementById(campo + "-autocomplete-list");
+        if (suggestionBox) suggestionBox.remove();
+      }
+
+      document.addEventListener("click", function(e) {
+        fecharListaSugestoes("sfDesktop");
+        fecharListaSugestoes("sfNotebook");
+        fecharListaSugestoes("sfMonitor1");
+        fecharListaSugestoes("sfMonitor2");
+        fecharListaSugestoes("sfSwitch");
+        fecharListaSugestoes("sfTelefone");
+        fecharListaSugestoes("sfAccessPoint");
+        fecharListaSugestoes("sfMiniPc");
+        fecharListaSugestoes("sfCameraRally");
+        fecharListaSugestoes("sfTap");
+        fecharListaSugestoes("sfExtTelefone");
+      });
+
+      // Função para garantir que apenas uma checkbox esteja marcada
+      function toggleCheckbox(selectedId, otherId) {
+        document.getElementById(otherId).checked = false;
+      }
+      
+      function cadastrarTermo() {
+        const checkDesktop = document.getElementById("checkDesktop").checked;
+        const checkNotebook = document.getElementById("checkNotebook").checked;
+        const checkMonitor1 = document.getElementById("checkMonitor1").checked;
+        const checkMonitor2 = document.getElementById("checkMonitor2").checked;
+        const checkSwitch = document.getElementById("checkSwitch").checked;
+        const checkTelefone = document.getElementById("checkTelefone").checked;
+        const checkAccessPoint = document.getElementById("checkAccessPoint").checked;
+        const checkMiniPc = document.getElementById("checkMiniPc").checked;
+        const checkCameraRally = document.getElementById("checkCameraRally").checked;
+        const checkTap = document.getElementById("checkTap").checked;
+        const checkExtTelefone = document.getElementById("checkExtTelefone").checked;
+
+        const sfDesktop = checkDesktop ? document.getElementById("sfDesktop").value : '';
+        const sfNotebook = checkNotebook ? document.getElementById("sfNotebook").value : '';
+        const sfMonitor1 = checkMonitor1 ? document.getElementById("sfMonitor1").value : '';
+        const sfMonitor2 = checkMonitor2 ? document.getElementById("sfMonitor2").value : '';
+        const sfSwitch = checkSwitch ? document.getElementById("sfSwitch").value : '';
+        const sfTelefone = checkTelefone ? document.getElementById("sfTelefone").value : '';
+        const sfAccessPoint = checkAccessPoint ? document.getElementById("sfAccessPoint").value : '';
+        const sfMiniPc = checkMiniPc ? document.getElementById("sfMiniPc").value : '';
+        const sfCameraRally = checkCameraRally ? document.getElementById("sfCameraRally").value : '';
+        const sfTap = checkTap ? document.getElementById("sfTap").value : '';
+        const sfExtTelefone = checkExtTelefone ? document.getElementById("sfExtTelefone").value : '';
+        const incidente = document.getElementById("incidente").value;
+        const ua = document.getElementById("ua").value;
+        const responsavel = document.getElementById("responsavel").value;
+        const email = document.getElementById("email").value;  // Novo campo para o e-mail
+        const patrimonioRelacionado = document.getElementById("patrimonioRelacionado").value;
+
+        const perifericosSelecionados = [];
+        document.querySelectorAll('.perifericos-section input[type="checkbox"]:checked').forEach(function(checkbox) {
+          perifericosSelecionados.push(checkbox.value);
+        });
+
+        // Verifica qual checkbox de "Substituição" ou "Empréstimo" está marcada
+        let termoTipo = "";
+        if (document.getElementById("substituicao").checked) {
+          termoTipo = "Substituição";
+        } else if (document.getElementById("emprestimo").checked) {
+          termoTipo = "Empréstimo";
+        }
+
+        if (checkDesktop || checkNotebook || checkMonitor1 || checkMonitor2 || checkSwitch || checkTelefone || checkAccessPoint || checkMiniPc || checkCameraRally || checkTap|| checkExtTelefone || perifericosSelecionados.length > 0) {
+            google.script.run.withSuccessHandler(function() {
+                alert("Termo gerado com sucesso!");
+            }).withFailureHandler(function(error) {
+                alert("Erro ao gerar o termo: " + error.message);
+            }).inserirDadosTermo(
+                sfDesktop, sfNotebook, sfMonitor1, sfMonitor2, sfSwitch, sfTelefone, sfAccessPoint, sfMiniPc, sfCameraRally, sfTap, sfExtTelefone,
+                incidente, ua, responsavel, email, patrimonioRelacionado, termoTipo, ...perifericosSelecionados
+            );
+        } else {
+            alert("Por favor, selecione pelo menos um equipamento ou periférico para registrar a saída.");
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function() {
+        verificarMostrarPatrimonioRelacionado();
+        initAutocomplete();
+      });
+    </script>
+  </head>
+  <body onload="initAutocomplete()">
+    <form>
+      <div class="container">
+        <h4>Informações Gerais</h4>
+        <div class="info-section">
+          <div>
+            <label for="incidente">Incidente*:</label>
+            <input type="text" id="incidente" placeholder="Incidente" required>
+          </div>
+          <div>
+            <label for="ua">U.A.*:</label>
+            <input type="text" id="ua" placeholder="U.A." required>
+          </div>
+          <div>
+            <label for="responsavel">Responsável*:</label>
+            <input type="text" id="responsavel" placeholder="Responsável" required>
+          </div>
+          <div>
+            <label for="email">E-mail*:</label> <!-- Novo campo de e-mail -->
+            <input type="email" id="email" placeholder="E-mail" required>
+          </div>          
+          <div class="checkbox-group">
+            <input type="checkbox" id="substituicao" onclick="toggleCheckbox('substituicao', 'emprestimo')">            
+            <label for="substituicao">Substituição</label>
+
+            <input type="checkbox" id="emprestimo" onclick="toggleCheckbox('emprestimo', 'substituicao')">
+            <label for="emprestimo">Empréstimo</label>
+            
+          </div>
+        </div>
+
+        <div class="selection-section">
+          <div class="patrimonios-section">
+            <h5>Patrimônios</h5>
+
+            <!-- Patrimônios Existentes e Novos -->
+            <input type="checkbox" id="checkDesktop" onclick="toggleSFInput('sfDesktop', this.checked)">
+            <label for="checkDesktop">Desktop</label>
+            <input type="text" id="sfDesktop" placeholder="SF Desktop" style="display: none;" oninput="autocompletarSF('sfDesktop', 'desktop')"><br>
+
+            <input type="checkbox" id="checkNotebook" onclick="toggleSFInput('sfNotebook', this.checked)">
+            <label for="checkNotebook">Notebook</label>
+            <input type="text" id="sfNotebook" placeholder="SF Notebook" style="display: none;" oninput="autocompletarSF('sfNotebook', 'notebook')"><br>
+
+            <input type="checkbox" id="checkMonitor1" onclick="toggleSFInput('sfMonitor1', this.checked)">
+            <label for="checkMonitor1">Monitor 1</label>
+            <input type="text" id="sfMonitor1" placeholder="SF Monitor 1" style="display: none;" oninput="autocompletarSF('sfMonitor1', 'monitor')"><br>
+
+            <input type="checkbox" id="checkMonitor2" onclick="toggleSFInput('sfMonitor2', this.checked)">
+            <label for="checkMonitor2">Monitor 2</label>
+            <input type="text" id="sfMonitor2" placeholder="SF Monitor 2" style="display: none;" oninput="autocompletarSF('sfMonitor2', 'monitor')"><br>
+
+            <input type="checkbox" id="checkSwitch" onclick="toggleSFInput('sfSwitch', this.checked)">
+            <label for="checkSwitch">Switch</label>
+            <input type="text" id="sfSwitch" placeholder="SF Switch" style="display: none;" oninput="autocompletarSF('sfSwitch', 'switch')"><br>
+
+            <input type="checkbox" id="checkTelefone" onclick="toggleSFInput('sfTelefone', this.checked)">
+            <label for="checkTelefone">Telefone</label>
+            <input type="text" id="sfTelefone" placeholder="SF Telefone" style="display: none;" oninput="autocompletarSF('sfTelefone', 'telefone')"><br>
+
+            <input type="checkbox" id="checkAccessPoint" onclick="toggleSFInput('sfAccessPoint', this.checked)">
+            <label for="checkAccessPoint">Access Point</label>
+            <input type="text" id="sfAccessPoint" placeholder="SF Access Point" style="display: none;" oninput="autocompletarSF('sfAccessPoint', 'accessPoint')"><br>
+
+            <input type="checkbox" id="checkMiniPc" onclick="toggleSFInput('sfMiniPc', this.checked)">
+            <label for="checkMiniPc">Mini PC</label>
+            <input type="text" id="sfMiniPc" placeholder="SF Mini PC" style="display: none;" oninput="autocompletarSF('sfMiniPc', 'miniPc')"><br>
+
+            <input type="checkbox" id="checkCameraRally" onclick="toggleSFInput('sfCameraRally', this.checked)">
+            <label for="checkCameraRally">Camera Rally</label>
+            <input type="text" id="sfCameraRally" placeholder="SF Câmera Rally" style="display: none;" oninput="autocompletarSF('sfCameraRally', 'cameraRally')"><br>
+            
+            <input type="checkbox" id="checkTap" onclick="toggleSFInput('sfTap', this.checked)">
+            <label for="checkTap">TAP</label>
+            <input type="text" id="sfTap" placeholder="SF TAP" style="display: none;" oninput="autocompletarSF('sfTap', 'tap')"><br>
+
+            <input type="checkbox" id="checkExtTelefone" onclick="toggleSFInput('sfExtTelefone', this.checked)">
+            <label for="checkExtTelefone">Extensor Telefone</label>
+            <input type="text" id="sfExtTelefone" placeholder="SF Extensor" style="display: none;" oninput="autocompletarSF('sfExtTelefone', 'extTelefone')">                                        
+          </div>
+
+          <div class="perifericos-section">
+            <h5>Periféricos</h5>
+            <div class="columns">
+              <div>
+                <input type="checkbox" id="mouseMultilaser" value="Mouse Multilaser USB"><label for="mouseMultilaser">Mouse Multilaser</label><br>
+                <input type="checkbox" id="tecladoOffice" value="Teclado Office Multimídia USB"><label for="tecladoOffice">Teclado Office Multimídia</label><br>
+                <input type="checkbox" id="headset" value="Headset Logitech USB"><label for="headset">Headset Logitech</label><br>
+                <input type="checkbox" id="webcamRapoo" value="Webcam Rapoo 720p HD"><label for="webcamRapoo">Webcam Rapoo 720p HD</label><br>
+                <input type="checkbox" id="webcamLogitech" value="Webcam Logitech 720p HD"><label for="webcamLogitech">Webcam Logitech 720p HD</label><br>
+                <input type="checkbox" id="mousepad" value="Mousepad"><label for="mousepad">Mousepad</label><br>
+                <input type="checkbox" id="mouseDellUsb" value="Mouse Dell USB"><label for="mouseDellUsb">Mouse Dell USB</label><br>
+                <input type="checkbox" id="tecladoLeitora" value="Teclado Dell USB Com Leitora"><label for="tecladoLeitora">Teclado Dell USB Com Leitora</label><br>
+                <input type="checkbox" id="caixaSom" value="Caixa de Som Dell"><label for="caixaSom">Caixa de Som Dell</label><br>   
+                <input type="checkbox" id="caboDviHdmi" value="Cabo DVI/HDMI"><label for="caboDviHdmi">Cabo DVI/HDMI</label><br>                               
+              </div>
+
+              <div>
+                <input type="checkbox" id="carregadorHP" value="Carregador HP"><label for="carregadorHP">Carregador HP</label><br>
+                <input type="checkbox" id="kitTecladoEMouseHP" value="Kit Teclado e Mouse HP"><label for="kitTecladoEMouseHP">Kit Teclado e Mouse HP</label><br>
+                <input type="checkbox" id="adaptadorHdmiVga" value="Adaptador HDMI/VGA HP"><label for="adaptadorHdmiVga">Adaptador HDMI/VGA HP</label><br>
+                <input type="checkbox" id="caboSegurancaHp" value="Cabo de segurança HP"><label for="caboSegurancaHp">Cabo de segurança HP</label><br>
+                <input type="checkbox" id="adaptadorDeTomada" value="Adaptador de Tomada"><label for="adaptadorDeTomada">Adaptador de tomada</label><br>
+                <input type="checkbox" id="mochilaHp" value="Mochila HP"><label for="mochilaHp">Mochila HP</label><br>
+              </div>
+
+              <div>
+                <input type="checkbox" id="carregadorDell" value="Carregador Dell"><label for="carregadorDell">Carregador Dell</label><br>
+                <input type="checkbox" id="tecladoDell" value="Teclado Dell"><label for="tecladoDell">Teclado Dell</label><br>                
+                <input type="checkbox" id="mouseDellWireless" value="Mouse Dell Wireless"><label for="mouseDellWireless">Mouse Wireless Dell</label><br> 
+                <input type="checkbox" id="caboSegurancaDell" value="Cabo de segurança Dell"><label for="caboSegurancaDell">Cabo de segurança Dell</label><br> 
+                <input type="checkbox" id="mochilaDell" value="Mochila Dell"><label for="mochilaDell">Mochila Dell</label><br>
+                <input type="checkbox" id="suporteNotebook" value="Suporte para Notebook BMAX"><label for="suporteNotebook">Suporte para Notebook</label><br>                
+              </div>
+
+              <div>
+                <input type="checkbox" id="carregadorDaten" value="Carregador Daten"><label for="carregadorDaten">Carregador Daten</label><br>              
+                <input type="checkbox" id="mouseDaten" value="Mouse Daten"><label for="mouseDaten">Mouse Daten</label><br> 
+                <input type="checkbox" id="caboSegurancaDaten" value="Cabo de segurança Daten"><label for="caboSegurancaDaten">Cabo de segurança Daten</label><br> 
+                <input type="checkbox" id="bolsaDaten" value="Bolsa Daten"><label for="bolsaDaten">Bolsa Daten</label><br>              
+              </div>
+
+              <div>
+                <input type="checkbox" id="rallyMountingKit" value="Rally Mounting Kit"><label for="rallyMountingKit">Rally Mounting Kit</label><br>
+                <input type="checkbox" id="rallyMicPod" value="Rally Mic Pod"><label for="rallyMicPod">Rally Mic Pod</label><br> 
+                <input type="checkbox" id="TapTableMount" value="TAP Table Mount"><label for="TapTableMount">TAP Table Mount</label><br>                
+                <input type="checkbox" id="caboSegurancaConexao" value="Cabo de Segurança Conexão"><label for="caboSegurancaConexao">Cabo de Segurança Conexão<label><br>                             
+              </div>
+            </div>
+            <input type="text" id="patrimonioRelacionado" placeholder="Patrimônio Relacionado" style="display: none;">
+          </div>
+        </div>
+      </div>
+      <div class="button-container">
+        <input type="button" value="Gerar Saída" onclick="cadastrarTermo()">
+      </div>
+    </form>
+  </body>
+</html>

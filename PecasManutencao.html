@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        width: 800px;
+        height: 600px;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+
+      h3 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      label {
+        display: inline-block;
+        margin-right: 10px;
+        color: #555;
+      }
+
+      input[type="text"] {
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        width: 100%;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+      }
+
+      input[type="checkbox"] {
+        margin-right: 10px;
+      }
+
+      .section-divider {
+        border-top: 1px solid #ddd;
+        margin: 20px 0;
+      }
+
+      .button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 10px;
+        width: 100%;
+        font-size: 16px;
+        transition: background-color 0.3s ease;
+      }
+
+      .button:hover {
+        background-color: #0056b3;
+      }
+
+      .column {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+      }
+
+      .checkbox-section {
+        display: inline-block;
+        padding: 10px;
+        border-radius: 10px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .sn-input {
+        display: none;
+        margin-top: 10px;
+      }
+
+      input[type="radio"] {
+        margin: 10px 0;
+      }
+
+      #pecas, #sfs {
+        padding: 10px;
+        border-radius: 10px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+    </style>
+    <script>
+      let pecasSelecionadas = [];
+      let sfSelecionado = '';
+
+      function toggleSNInput(id, isChecked) {
+        const snInput = document.getElementById(id);
+        snInput.style.display = isChecked ? 'block' : 'none';
+      }
+
+      function gerar() {
+        const incidente = document.getElementById("incidente").value;
+        const responsavel = "Erik Mesel Ferreira Pires";
+        const ua = "35241";
+        
+        // Verifica se o campo "Incidente" está preenchido
+        if (!incidente) {
+          alert("Por favor, preencha o campo Incidente.");
+          return;
+        }
+
+        sfSelecionado = document.querySelector('input[name="sfSelect"]:checked')?.value;
+
+        pecasSelecionadas = [];
+
+        // Coleta todas as peças selecionadas
+        document.querySelectorAll('.peca-checkbox').forEach(function(checkbox) {
+          if (checkbox.checked) {
+            const sn = document.getElementById('sn' + checkbox.value).value;
+            pecasSelecionadas.push({ item: checkbox.value, sn: sn });
+          }
+        });
+
+        if (pecasSelecionadas.length > 0 && sfSelecionado) {
+          google.script.run.enviarVariasPecas(pecasSelecionadas, incidente, responsavel, ua, sfSelecionado);
+          alert("Peças e SF enviados com sucesso!");
+        } else {
+          alert("Por favor, selecione ao menos uma peça e escolha um patrimônio (SF).");
+        }
+      }
+
+      // Carrega as peças da aba "Peças" da planilha e as exibe no formulário
+      function carregarPecas() {
+        google.script.run.withSuccessHandler(function(pecas) {
+          const pecasContainer = document.getElementById("pecas");
+          pecasContainer.innerHTML = '';  // Limpa a lista atual
+
+          pecas.forEach(function(peca) {
+            const div = document.createElement("div");
+            div.innerHTML = `
+              <input type="checkbox" class="peca-checkbox" id="${peca.nome}" value="${peca.nome}" onclick="toggleSNInput('sn${peca.nome}', this.checked)">
+              <label for="${peca.nome}">${peca.nome} (Quantidade: ${peca.quantidade})</label>
+              <input type="text" id="sn${peca.nome}" class="sn-input" placeholder="S/N ${peca.nome}">
+            `;
+            pecasContainer.appendChild(div);
+          });
+        }).getPecasFromPlanilha();
+      }
+
+      // Carrega os SFs das abas de patrimônio e atualiza a lista de opções no formulário
+      function carregarSFs() {
+        google.script.run.withSuccessHandler(function(sfs) {
+          const sfContainer = document.getElementById("sfs");
+          sfContainer.innerHTML = '';  // Limpa a lista atual
+
+          sfs.forEach(function(sf) {
+            const div = document.createElement("div");
+            div.innerHTML = `
+              <input type="radio" name="sfSelect" value="${sf.split(' - ')[0]}"> <label>${sf}</label>
+            `;
+            sfContainer.appendChild(div);
+          });
+        }).getSFsFromPatrimonios();
+      }
+
+      // Carregar as peças e SFs ao carregar a página
+      window.onload = function() {
+        carregarPecas();
+        carregarSFs();
+      };
+    </script>
+  </head>
+  <body>
+    <div class="column">
+      <label>INC</label>
+      <input type="text" id="incidente" placeholder="Insira o incidente">
+    </div>
+
+    <h3>Selecione a peça que será enviada:</h3>
+    <div id="pecas"></div>
+
+    <hr class="section-divider">
+
+    <h3>Selecione o Equipamento Relacionado (SF):</h3>
+    <div id="sfs"></div>
+
+    <button class="button" onclick="gerar()">GERAR</button>
+  </body>
+</html>

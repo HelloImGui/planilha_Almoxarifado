@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        width: 700px;
+        height: 500px;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f4f9;
+      }
+
+      h3 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        width: 70px;
+        height: 20px;
+        margin: 0 auto;
+        border-radius: 15px;
+        background-color: #fff;
+        padding: 10px;
+        font-size: 16px;
+        text-align: left;
+        color: #ccc;
+      }
+
+      .input-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+        position: relative;
+      }
+
+      input[type="text"] {
+        width: 120px;
+        padding: 12px;
+        border-radius: 20px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+        text-align: center;
+      }
+
+      .autocomplete-suggestions {
+        position: absolute;
+        border: 1px solid #ccc;
+        background-color: white;
+        max-height: 150px;
+        overflow-y: auto;
+        width: 200px;
+        z-index: 10;
+        top: 50px;
+      }
+
+      .autocomplete-suggestion {
+        padding: 10px;
+        cursor: pointer;
+      }
+
+      .autocomplete-suggestion:hover,
+      .autocomplete-active {
+        background-color: #f0f0f0;
+      }
+
+      button.search-btn {
+        background-color: #2ecc71;
+        border: none;
+        border-radius: 20px;
+        padding: 10px;
+        margin-left: 10px;
+        cursor: pointer;
+      }
+
+      .search-btn img {
+        width: 16px;
+        height: 16px;
+      }
+
+      table {
+        width: 70%;
+        margin: 20px auto;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .buttons {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        position: absolute;
+        right: 30px;
+        top: 150px;
+      }
+
+      .button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-bottom: 10px;
+        width: 100px;
+      }
+
+      .delete-btn {
+        background-color: #e74c3c;
+        color: white;
+      }
+
+      .generate-btn {
+        background-color: #2ecc71;
+        color: white;
+      }
+    </style>
+
+    <script>
+      let sfTable = [];
+      let allSFs = [];
+      let currentFocus = -1;
+
+      function init() {
+        // Pegar todos os SFs da planilha para autocompletar das abas limitadas
+        google.script.run.withSuccessHandler(function(data) {
+          allSFs = data;
+        }).getSFsFromSpecificAbas();
+      }
+
+      // Função para exibir as sugestões de autocompletar
+      function autocompletarSF() {
+        const input = document.getElementById("sfInput");
+        const val = input.value.toUpperCase();
+        fecharListaSugestoes();
+
+        if (!val) return false;
+        currentFocus = -1;
+
+        // Criar o container para sugestões
+        const suggestionBox = document.createElement("div");
+        suggestionBox.setAttribute("id", "autocomplete-list");
+        suggestionBox.setAttribute("class", "autocomplete-suggestions");
+        input.parentNode.appendChild(suggestionBox);
+
+        // Mostrar sugestões com base no que foi digitado
+        allSFs.forEach((item) => {
+          const sf = item.sf;
+          const modelo = item.modelo;
+          
+          if (sf.toUpperCase().startsWith(val)) {
+            const suggestion = document.createElement("div");
+            suggestion.setAttribute("class", "autocomplete-suggestion");
+            suggestion.innerHTML = `<strong>${sf.substr(0, val.length)}</strong>${sf.substr(val.length)} (${modelo})`;
+            suggestion.addEventListener("click", function() {
+              input.value = sf;
+              fecharListaSugestoes();
+            });
+            suggestionBox.appendChild(suggestion);
+          }
+        });
+      }
+
+      // Função para fechar a lista de sugestões
+      function fecharListaSugestoes() {
+        const suggestionBox = document.getElementById("autocomplete-list");
+        if (suggestionBox) suggestionBox.remove();
+      }
+
+      // Função para controlar navegação pelo teclado
+      function navegarPeloTeclado(e) {
+        const suggestionBox = document.getElementById("autocomplete-list");
+        if (!suggestionBox) return;
+        let suggestions = suggestionBox.getElementsByClassName("autocomplete-suggestion");
+
+        if (e.keyCode === 40) { // Tecla para baixo
+          currentFocus++;
+          adicionarClasseAtiva(suggestions);
+        } else if (e.keyCode === 38) { // Tecla para cima
+          currentFocus--;
+          adicionarClasseAtiva(suggestions);
+        } else if (e.keyCode === 13 || e.keyCode === 9) { // Enter ou Tab
+          e.preventDefault();
+          if (currentFocus > -1) {
+            suggestions[currentFocus].click();
+          }
+        }
+      }
+
+      // Função para adicionar a classe "autocomplete-active" ao item ativo
+      function adicionarClasseAtiva(suggestions) {
+        if (!suggestions) return false;
+        removerClasseAtiva(suggestions);
+
+        if (currentFocus >= suggestions.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = suggestions.length - 1;
+
+        suggestions[currentFocus].classList.add("autocomplete-active");
+      }
+
+      // Função para remover a classe "autocomplete-active" de todos os itens
+      function removerClasseAtiva(suggestions) {
+        for (let i = 0; i < suggestions.length; i++) {
+          suggestions[i].classList.remove("autocomplete-active");
+        }
+      }
+
+      // Função para buscar o SF digitado
+      function buscarSF() {
+        const sfValue = document.getElementById("sfInput").value;
+        
+        google.script.run.withSuccessHandler(function(data) {
+          if (data) {
+            // Adiciona o SF à tabela visual
+            sfTable.push({ patrimonio: data.sfItem, descricao: data.descricao });
+            atualizarTabela();
+          } else {
+            alert("SF não encontrado.");
+          }
+        }).buscarDadosSF(sfValue);
+      }
+
+      // Função para atualizar a tabela
+      function atualizarTabela() {
+        const tableBody = document.getElementById("sfTableBody");
+        tableBody.innerHTML = ""; // Limpa a tabela antes de atualizá-la
+        
+        sfTable.forEach((item) => {
+          const row = `<tr><td>${item.patrimonio}</td><td>${item.descricao}</td></tr>`;
+          tableBody.innerHTML += row;
+        });
+      }
+
+      // Função para apagar o último SF da tabela
+      function apagarUltimoSF() {
+        sfTable.pop(); // Remove o último item da tabela
+        atualizarTabela();
+      }
+
+      // Função para enviar os dados para a aba Manutenção
+      function gerarManutencao() {
+        google.script.run.enviarDadosManutencao(sfTable);
+        sfTable = []; // Limpa a tabela após envio
+        atualizarTabela();
+      }
+
+      // Fechar a lista de sugestões se o usuário clicar fora do campo
+      document.addEventListener("click", function(e) {
+        fecharListaSugestoes();
+      });
+    </script>
+  </head>
+  <body onload="init()">
+    <h3>Digite os SFs que irão para manutenção</h3>
+    
+    <div class="input-wrapper">
+      <input type="text" id="sfInput" placeholder="SF" oninput="autocompletarSF()" onkeydown="navegarPeloTeclado(event)">
+      <button class="search-btn" onclick="buscarSF()">
+        <img src="https://cdn-icons-png.flaticon.com/512/622/622669.png" alt="Pesquisar">
+      </button>
+    </div>
+    
+    <table id="sfTable">
+      <thead>
+        <tr>
+          <th>Patrimônio</th>
+          <th>Descrição</th>
+        </tr>
+      </thead>
+      <tbody id="sfTableBody"></tbody>
+    </table>
+
+    <div class="buttons">
+      <button class="button delete-btn" onclick="apagarUltimoSF()">APAGAR</button>
+      <button class="button generate-btn" onclick="gerarManutencao()">GERAR</button>
+    </div>
+  </body>
+</html>

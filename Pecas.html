@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        width: 600px;
+        height: 500px;
+        padding: 20px;
+        background-color: #f4f4f4;
+      }
+
+      h3 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      label {
+        display: inline-block;
+        margin-right: 10px;
+        color: #555;
+      }
+
+      input[type="text"] {
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        width: 100%;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+      }
+
+      .info-section {
+        border: 2px solid #007BFF;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+      }
+
+      .info-section h4 {
+        margin-bottom: 10px;
+        font-size: 16px;
+        color: #007BFF;
+      }
+
+      input[type="checkbox"] {
+        margin-right: 10px;
+      }
+
+      .section-divider {
+        border-top: 1px solid #ddd;
+        margin: 20px 0;
+      }
+
+      .button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 10px;
+        width: 100%;
+        font-size: 16px;
+        transition: background-color 0.3s ease;
+      }
+
+      .button:hover {
+        background-color: #0056b3;
+      }
+
+      .column {
+        display: inline-block;
+        margin-bottom: 20px;
+      }
+
+      .checkbox-section {
+        display: inline-block;
+        padding: 10px;
+        border-radius: 10px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .sn-input {
+        display: none;
+        margin-top: 10px;
+      }
+
+      #pecas {
+        padding: 10px;
+        border-radius: 10px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+    </style>
+    <script>
+      let pecasSelecionadas = [];
+
+      function toggleSNInput(id, isChecked) {
+        const snInput = document.getElementById(id);
+        snInput.style.display = isChecked ? 'block' : 'none';
+      }
+
+      function gerar() {
+        const incidente = document.getElementById("incidente").value;
+        const sfManual = document.getElementById("sfManual").value;
+        const responsavel = document.getElementById("Responsavel").value;
+        const ua = document.getElementById("UA").value;
+
+        pecasSelecionadas = [];
+
+        // Coleta todas as peças selecionadas
+        document.querySelectorAll('.peca-checkbox').forEach(function(checkbox) {
+          if (checkbox.checked) {
+            const sn = document.getElementById('sn' + checkbox.value).value;
+            pecasSelecionadas.push({ item: checkbox.value, sn: sn });
+          }
+        });
+
+        if (pecasSelecionadas.length > 0 && incidente && sfManual) {
+          google.script.run.enviarVariasPecasUpgrade(pecasSelecionadas, incidente, responsavel, ua, sfManual);
+          alert("Peças enviadas com sucesso!");
+        } else {
+          alert("Por favor, selecione ao menos uma peça, preencha o incidente e insira o SF.");
+        }
+      }
+
+      // Carrega as peças da aba "Peças" da planilha e as exibe no formulário
+      function carregarPecas() {
+        google.script.run.withSuccessHandler(function(pecas) {
+          const pecasContainer = document.getElementById("pecas");
+          pecasContainer.innerHTML = '';  // Limpa a lista atual
+
+          pecas.forEach(function(peca) {
+            const div = document.createElement("div");
+            div.innerHTML = `
+              <input type="checkbox" class="peca-checkbox" id="${peca.nome}" value="${peca.nome}" onclick="toggleSNInput('sn${peca.nome}', this.checked)">
+              <label for="${peca.nome}">${peca.nome} (Quantidade: ${peca.quantidade})</label>
+              <input type="text" id="sn${peca.nome}" class="sn-input" placeholder="S/N ${peca.nome}">
+            `;
+            pecasContainer.appendChild(div);
+          });
+        }).getPecasFromPlanilha();
+      }
+
+      // Carregar as peças ao carregar a página
+      window.onload = carregarPecas;
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="info-section">
+        <h4>Informações Gerais</h4>
+        <label>Incidente/WO</label>
+        <input type="text" id="incidente" placeholder="Insira o incidente">
+      
+        <label>SF relacionado:</label>
+        <input type="text" id="sfManual" placeholder="Insira o SF">
+            
+        <label>Responsável</label>
+        <input type="text" id="Responsavel" placeholder="Insira o nome">
+            
+        <label>U.A.</label>
+        <input type="text" id="UA" placeholder="Insira a U.A.">
+        
+      </div>
+      <h3>Selecione a peça que será enviada:</h3>
+      <div id="pecas"></div>
+
+      <button class="button" onclick="gerar()">GERAR</button>
+    </div>
+  </body>
+</html>

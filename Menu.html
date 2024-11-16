@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu Principal - Controle de Estoque</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .menu-container {
+      background-color: #fff;
+      padding: 40px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+      text-align: center;
+      width: 300px;
+    }
+
+    .menu-container h1 {
+      font-size: 24px;
+      margin-bottom: 30px;
+      color: #007BFF;
+    }
+
+    .menu-button {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .menu-button:hover {
+      background-color: #0056b3;
+    }
+
+    .menu-button:active {
+      background-color: #003d80;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="menu-container">
+    <h1>Menu Principal</h1>
+
+    <button class="menu-button" onclick="abrirFormularioEntrada()">Tela de Entrada</button>
+    <button class="menu-button" onclick="abrirTermoFormulario()">Tela de Saída</button>
+    <button class="menu-button" onclick="abrirFormularioPesquisaGlobal()">Tela de Pesquisa</button>
+    <button class="menu-button" onclick="abrirFormularioSaidaPecas()">Tela de Saída Peças</button>
+    <button class="menu-button" onclick="abrirFormularioManutencao()">Tela de Manutenção</button>
+    <button class="menu-button" onclick="abrirFormularioPecas()">Tela de Peças para Manutenção</button>
+    <button class="menu-button" onclick="abrirRetornoManutencao()">Tela de Retorno Manutenção</button>
+  </div>
+
+  <script>
+    function abrirFormularioEntrada() {
+      google.script.run.abrirFormularioEntrada();
+    }
+
+    function abrirTermoFormulario() {
+      google.script.run.abrirTermoFormulario();
+    }
+
+    function abrirFormularioPesquisaGlobal() {
+      google.script.run.abrirFormularioPesquisaGlobal();
+    }
+
+    function abrirFormularioSaidaPecas() {
+      google.script.run.abrirFormularioSaidaPecas();
+    }
+
+    function abrirFormularioManutencao() {
+      google.script.run.abrirFormularioManutencao();
+    }
+
+    function abrirFormularioPecas() {
+      google.script.run.abrirFormularioPecas();
+    }
+
+    function abrirRetornoManutencao() {
+      google.script.run.abrirRetornoManutencao();
+    }
+
+    function abrirMenu() {
+      // Função que abre o menu principal
+      google.script.run.abrirMenu();
+    }
+  </script>
+
+</body>
+</html>
